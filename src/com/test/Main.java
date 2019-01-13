@@ -4,15 +4,14 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException {
 
+        Building home = new Building(4);
+        home.getStage(3).callLift(2).goToStage(4);
+        home.getStage(2).callLift(1).goToStage(3);
+        home.getStage(3).callLift(1).goToStage(1);
+        home.startLift();
 
-        Lift lift2 = new Lift();
 
-        lift2.call(1, 4);
-        lift2.call(3, 1);
-        lift2.call(4, 3);
-        lift2.go();
-        lift2.call(2,3);
-        lift2.go();
+
 
     }
 }

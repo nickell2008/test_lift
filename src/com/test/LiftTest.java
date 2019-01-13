@@ -1,15 +1,17 @@
 package com.test;
 
+
 import static org.junit.Assert.*;
+
 
 public class LiftTest {
 
-    Lift lift = new Lift();
+    Lift lift = new Lift(4);
     @org.junit.Before
     public void setUp() throws Exception {
-        lift.call(1, 4); //находится на 1м этаже, хочет ехать на 4 этаж
-        lift.call(3, 2); //на 3м этаже, хочет ехать на 2 этаж
-        lift.call(4, 1); //на 4м этаже, хочет ехать на 1 этаж
+//        lift.call(1, 4); //находится на 1м этаже, хочет ехать на 4 этаж
+//        lift.call(3, 2); //на 3м этаже, хочет ехать на 2 этаж
+//        lift.call(4, 1); //на 4м этаже, хочет ехать на 1 этаж
     }
 
     @org.junit.Test
