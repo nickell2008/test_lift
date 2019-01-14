@@ -92,8 +92,9 @@ public class Lift {
     }
 
 
-    public void getLastStage() {
+    public int getLastStage() {
         System.out.println("Последний этаж " + lastStage);
+        return lastStage;
     }
 
     /**

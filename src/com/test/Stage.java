@@ -4,7 +4,7 @@ public class Stage {
 
     Lift lift ;
     Integer numOfStage = 0;
-    Integer numOfPerson;
+    Integer numOfPerson = 0;
 
     public Stage(Integer currentStage, Lift lift) {
         this.lift = lift;
@@ -12,14 +12,13 @@ public class Stage {
     }
 
     public Lift callLift(int numOfPerson) {
-//        this.numOfPerson = this.numOfPerson+numOfPerson;
+        this.numOfPerson =+numOfPerson;
        return lift.call(numOfStage, numOfPerson);
     }
 
-    public void goUpOnLift() {
+    public void turnVipKey(){
+
     }
 
-    public void goDownOnLift() {
-    }
 
 }
