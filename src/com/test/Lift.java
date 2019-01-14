@@ -1,33 +1,29 @@
 package com.test;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 public class Lift {
 
     public enum Status {UP, DOWN, STOP}
 
-    private final int V = 1;//скорость движения
-    private final int H = 4;//высота лифта и этажа
+    private final int V = 1; //скорость движения
+    private final int H = 4; //высота лифта и этажа
 
     private int lastStage;
 
-    private Integer currStage = 1;//текущий этаж. Начинаем всегда с первого
-    private Status currStatus;//текущее состояние
-    private Status prevStatus;//пред состояние
+    private Integer currStage = 1; //текущий этаж. Начинаем всегда с первого
+    private Status currStatus; //текущее состояние
+    private Status prevStatus; //пред состояние
     private Integer maxNumOfPerson = 10;
-    private int lastCall;
+    private int maxStageUp = 1;
+    private int minStageDown = 4;
 
-    private Set<Integer> call = new LinkedHashSet<>();//список выозовов лифта
-    private Set<Integer> goUp = new HashSet<>();//список этажей , для выхода из лифта при подьеме
-    private Set<Integer> goDown = new HashSet<>();//список этажей , для выхода из лифта при спуске
+    private Set<Integer> call = new HashSet<>(); //список выозовов лифта
+    private Set<Integer> stageList = new HashSet<>(); //список этажей , для выхода из лифта
+    private List<Person> listPersons = new LinkedList<>();
 
     public Lift(int lastStage) {
         this.lastStage = lastStage;
-
-
     }
 
     /**
@@ -35,66 +31,50 @@ public class Lift {
      */
     public void go() throws InterruptedException {
 
-        while (true) {
 
-            if (currStage == 1) currStatus = Status.UP;
-            if (currStage == lastStage) currStatus = Status.DOWN;
-            System.out.println(currStatus);
-            System.out.println("list up " + goUp);
-            System.out.println("list down " + goDown);
-//            System.out.println("cur stage "+currStage);
-            if (currStatus == Status.UP && currStage != lastStage && !goUp.isEmpty()) {
+        if (currStage == 1) currStatus = Status.UP;
+        if (currStage == lastStage) currStatus = Status.DOWN;
+        System.out.println(currStatus);
+        System.out.println("list stage " + stageList);
+        System.out.println("list call " + call);
 
-                if (call.contains(currStage)) {
-                    call.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Подбираем человека");
-                }
+        while (currStatus == Status.UP) {
+            if (call.contains(currStage)) {
+                call.remove(currStage);
+                System.out.println("Этаж " + currStage + ". Подбираем человека");
+            }
+            System.out.println("Этаж " + currStage + ". Лифт едет вверх...");
+            Thread.sleep(V * H * 100);
+            currStage++;
+            if (stageList.contains(currStage)) {
+                stageList.remove(currStage);
+                System.out.println("Этаж " + currStage + ". Высаживаю человека");
+            }
 
-                System.out.println("Этаж " + currStage + ". Лифт едет вверх...");
-                Thread.sleep(V * H * 100);
-                currStage++;
+            if (maxStageUp == currStage) currStatus = Status.DOWN;
+        }
+        while (currStatus == Status.DOWN) {
 
-                if (goUp.contains(currStage)) {
-                    goUp.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Высаживаю человека");
-                }
+            if (call.contains(currStage)) {
+                call.remove(currStage);
+                System.out.println("Этаж " + currStage + ". Подбираем человека");
+            }
 
-                if (goUp.isEmpty()) currStatus = Status.DOWN;
-            } else if (currStatus == Status.DOWN && currStage != 1 && !goDown.isEmpty()) {
-
-                if (call.contains(currStage)) {
-                    call.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Подбираем человека");
-                }
-
-                System.out.println("Этаж " + currStage + ". Лифт едет вниз...");
-                Thread.sleep(V * H * 100);
-                currStage--;
-                if (goDown.contains(currStage)) {
-                    goDown.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Высаживаю человека");
-                }
-                if (goDown.isEmpty()) currStatus = Status.UP;
-
-            } else break;
+            System.out.println("Этаж " + currStage + ". Лифт едет вниз...");
+            Thread.sleep(V * H * 100);
+            currStage--;
+            if (stageList.contains(currStage)) {
+                stageList.remove(currStage);
+                System.out.println("Этаж " + currStage + ". Высаживаю человека");
+            }
+            if(minStageDown==currStage) currStatus = Status.UP;
         }
     }
 
     public void goToStage(Integer stage) {
-        System.out.print("Ехать на "+ stage);
-//        int maxStageToUp = !goUp.isEmpty() ? goUp.stream().max(Comparator.comparing(Integer::valueOf)).get() : 0;
-//        if (maxStageToUp < stage)
-//            goUp.add(stage);
-//        else goDown.add(stage);
-        if(stage>lastCall){
-            goUp.add(stage);
-        }else goDown.add(stage);
-    }
+        System.out.print("Ехать на " + stage);
 
-
-    public int getLastStage() {
-        System.out.println("Последний этаж " + lastStage);
-        return lastStage;
+        stageList.add(stage);
     }
 
     /**
@@ -103,7 +83,6 @@ public class Lift {
      * @param from с какого этажа вызов
      */
     public Lift call(Integer from, Integer numOfPerson) {
-        lastCall = from;
         call.add(from);
         System.out.println("Лифт вызвали на " + from + " этаже");
         return this;
@@ -123,12 +102,11 @@ public class Lift {
         }
     }
 
-
     /**
      * Получить статус лифта
      */
     public Status getCurrStatus() {
-        if (goUp.isEmpty() && goDown.isEmpty()) currStatus = Status.STOP;
+        if (stageList.isEmpty()) currStatus = Status.STOP;
         String status = currStatus == Status.DOWN ? "едет вниз" : currStatus == Status.UP ? "едет вверх" : "стоит";
         System.out.println("Лифт " + status);
         return currStatus;
@@ -140,5 +118,8 @@ public class Lift {
     public Integer getCurrStage() {
         System.out.println("Лифт на " + currStage + " этаже");
         return currStage;
+    }
+    public void addPassenger(Person person){
+    listPersons.add(person);
     }
 }
