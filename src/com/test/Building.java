@@ -5,13 +5,12 @@ import java.util.List;
 
 public class Building {
 
-    Lift lift;
+
     private List<Stage> stages = new ArrayList<>();
 
     public Building(Integer numOfStages) {
-        lift = new Lift(numOfStages);
         for (int i = 0; i <= numOfStages; i++)
-            stages.add(new Stage(i, lift));
+            stages.add(new Stage(i, numOfStages));
     }
 
     public Stage getStage(int stage) {
@@ -22,11 +21,19 @@ public class Building {
             return stages.get(stages.size() - 1);
         }
     }
-    public void startLift(){
-        try {
-            lift.go();
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
+
+    public int getNumOfStages() {
+        return stages.size();
+    }
+
+    public List<Stage> getStages() {
+        return stages;
+    }
+
+    @Override
+    public String toString() {
+        return "Building{" +
+                "stages=" + stages +
+                '}';
     }
 }
