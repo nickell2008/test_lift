@@ -12,8 +12,9 @@ public class Main {
         home.getStage(7).callLift(2);
         home.getStage(3).callLift(5);
         home.getStage(8).callLift(1);
-        Lift lift = new Lift(home);
-        lift.go();
+        new Thread(new Lift(home,1)).start();
+        new Thread(new Lift(home,2)).start();
+
 
 
 

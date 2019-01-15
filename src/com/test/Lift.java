@@ -3,7 +3,7 @@ package com.test;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class Lift {
+public class Lift implements Runnable {
 
     public enum Status {UP, DOWN, STOP}
 
@@ -17,12 +17,15 @@ public class Lift {
     private int maxNumOfPerson = 10;
 
 
+    private int liftNum;
+
     private Building building;
     private List<Person> personListInLift = new LinkedList<>();
     private int curPerInLift;
     private int lastStage;
 
-    public Lift(Building building) {
+    public Lift(Building building, int liftNum) {
+        this.liftNum = liftNum;
         this.building = building;
         this.lastStage = building.getNumOfStages() - 1;
     }
@@ -34,7 +37,7 @@ public class Lift {
     /**
      * Запуск лифта
      */
-    public void go() throws InterruptedException {
+    public void run() {
         while (hasCall() || isGoDown() || isGoUp()) {
             while (currStatus == Status.UP) {
                 getPeople();
@@ -42,16 +45,24 @@ public class Lift {
                     currStatus = Status.DOWN;
                     break;
                 }
-                System.out.println("Этаж " + currStage + ". Лифт едет вверх...");
-                Thread.sleep(V * H * 100);
+                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вверх...");
+                try {
+                    Thread.sleep(V * H * 30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 currStage++;
                 pushPerson();
             }
             if (!hasCall() && curPerInLift == 0) stop();
             while (currStatus == Status.DOWN) {
                 getPeople();
-                System.out.println("Этаж " + currStage + ". Лифт едет вниз...");
-                Thread.sleep(V * H * 100);
+                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вниз...");
+                try {
+                    Thread.sleep(V * H * 30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 currStage--;
                 pushPerson();
                 if (!isGoDown()) currStatus = Status.UP;
@@ -75,16 +86,16 @@ public class Lift {
         return (building.getStages().stream().anyMatch(Stage::hasPeople));
     }
 
-    private void getPeople() {
+    private synchronized void getPeople() {
         if (!getPersonInStage().isEmpty() && !ifFull()) {
-            System.out.println("Этаж " + currStage + ". Подбираем людей");
+            System.out.println("Этаж " + currStage + ". Лифт " +liftNum+ ". Подбираем людей");
             Iterator<Person> personIterator = getPersonInStage().iterator();
             while (personIterator.hasNext() && !ifFull()) {
                 personListInLift.add(personIterator.next());
                 personIterator.remove();
                 curPerInLift++;
             }
-            System.out.println("В лифте " + curPerInLift + " людей. ");
+            System.out.println("В лифте "+liftNum+" " + curPerInLift + " людей. ");
 
         }
     }
@@ -100,14 +111,14 @@ public class Lift {
             })
                     .collect(Collectors.toList());
 
-            System.out.println("Этаж " + currStage + ". Высаживаю людей");
-            System.out.println("В лифте " + curPerInLift + " людей. ");
+            System.out.println("Этаж " + currStage + ". Лифт "+liftNum+". Высаживаю людей");
+            System.out.println("В лифте "+liftNum+" " + curPerInLift + " людей. ");
         }
     }
 
     private boolean ifFull() {
         if (curPerInLift == maxNumOfPerson) {
-            System.out.println("Лифт переполнен");
+            System.out.println("Лифт "+liftNum+" переполнен");
             return true;
         }
         return false;
