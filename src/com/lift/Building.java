@@ -1,7 +1,8 @@
-package com.test;
+package com.lift;
 
 import java.util.ArrayList;
 import java.util.List;
+
 
 public class Building {
 
@@ -13,7 +14,10 @@ public class Building {
             stages.add(new Stage(i, numOfStages));
     }
 
-    public Stage getStage(int stage) {
+    /**
+     * Возвращает лифт за номером
+     */
+    public Stage Stage(int stage) {
         try {
             return this.stages.get(stage);
         } catch (IndexOutOfBoundsException e) {
@@ -30,10 +34,5 @@ public class Building {
         return stages;
     }
 
-    @Override
-    public String toString() {
-        return "Building{" +
-                "stages=" + stages +
-                '}';
-    }
+
 }
