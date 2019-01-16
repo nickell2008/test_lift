@@ -12,12 +12,14 @@ public class Lift implements Runnable {
 
     private final int V = 1; //скорость движения
     private final int H = 4; //высота лифта и этажа
+    private final int time = 10 * V * H;
 
 
     private Integer currStage = 1; //текущий этаж. Начинаем всегда с первого
     private Status currStatus = Status.UP; //текущее состояние
     private Status prevStatus; //пред состояние
     private final int maxNumOfPerson = 10; // максимальное кол-во людей в лифте
+    private boolean isRun = true;
 
 
     private int liftNum; // номер лифта
@@ -40,50 +42,21 @@ public class Lift implements Runnable {
      */
     @Override
     public void run() {
-        while (isGoDown() || isGoUp()) {
-            while (currStatus == Status.UP) {
+        while ((isGoDown() || isGoUp()&&isRun)) {
+            while (isGoUp()) {
                 getPeople();
-                Optional<Person> turnVip= personListInLift.stream()
-                        .filter(Person::isVip)
-                        .findAny();
-                if (turnVip.isPresent()) {
-                    vipPerson(turnVip.get());
+                if (checkVip()) {
                     continue;
                 }
-                if (!isGoUp()) {
-                    currStatus = Status.DOWN;
-                    break;
-                }
-                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вверх...");
-                try {
-                    Thread.sleep(V * H * 30);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                currStage++;
+                goUp();
                 pushPerson();
             }
-
-            while (currStatus == Status.DOWN) {
+            while (isGoDown()) {
                 getPeople();
-                Optional<Person> turnVip= personListInLift.stream()
-                        .filter(Person::isVip)
-                        .findAny();
-                if (turnVip.isPresent()) {
-                    vipPerson(turnVip.get());
+                if (checkVip()) {
                     continue;
                 }
-                if (!isGoDown()){
-                    currStatus = Status.UP;
-                    break;
-                }
-                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вниз...");
-                try {
-                    Thread.sleep(V * H * 30);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                currStage--;
+                goDown();
                 pushPerson();
             }
         }
@@ -97,8 +70,8 @@ public class Lift implements Runnable {
                 .anyMatch(person -> person.getToStage() > currStage)
                 ||
                 building.getStages().stream()
-                .anyMatch(stage -> stage.getPersonList().stream()
-                        .anyMatch(person -> person.getCurrStage() > currStage));
+                        .anyMatch(stage -> stage.getPersonList().stream()
+                                .anyMatch(person -> person.getCurrStage() > currStage));
     }
 
     /**
@@ -109,8 +82,19 @@ public class Lift implements Runnable {
                 .anyMatch(person -> person.getToStage() < currStage)
                 ||
                 building.getStages().stream()
-                .anyMatch(stage -> stage.getPersonList().stream()
-                        .anyMatch(person -> person.getToStage() < currStage));
+                        .anyMatch(stage -> stage.getPersonList().stream()
+                                .anyMatch(person -> person.getToStage() < currStage));
+    }
+
+    public boolean checkVip() {
+        Optional<Person> turnVip = personListInLift.stream()
+                .filter(Person::isVip)
+                .findAny();
+        if (turnVip.isPresent()) {
+            vipPerson(turnVip.get());
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -121,37 +105,43 @@ public class Lift implements Runnable {
         System.out.println("Повернут VIP ключ в лифте " + liftNum + " Движемся без остановок на " + numOfStage + " этаж");
         while (currStage != numOfStage) {
             if (currStage > numOfStage) {
-                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вниз ...");
-                currStatus = Status.DOWN;
-                currStage--;
-                try {
-                    Thread.sleep(V * H * 30);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                goDown();
             }
             if (currStage < numOfStage) {
-                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вверх ...");
-                currStatus = Status.UP;
-                currStage++;
-                try {
-                    Thread.sleep(V * H * 30);
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
+                goUp();
             }
         }
         pushPerson();
+    }
+
+    private void goDown() {
+        System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вниз ...");
+        currStage--;
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void goUp() {
+        System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вверх ...");
+        currStage++;
+        try {
+            Thread.sleep(time);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     /**
      * Подбор людей на этаже
      */
     private synchronized void getPeople() {
-        if (!getPersonInStage().isEmpty() && !isFull()) {
+        if (!getPersonInStage().isEmpty() && isFull()) {
             System.out.println("Этаж " + currStage + ". Лифт " + liftNum + ". Подбираем людей");
             Iterator<Person> personIterator = getPersonInStage().iterator();
-            while (personIterator.hasNext() && !isFull()) {
+            while (personIterator.hasNext() && isFull()) {
                 personListInLift.add(personIterator.next());
                 personIterator.remove();
                 curPerInLift++;
@@ -168,12 +158,12 @@ public class Lift implements Runnable {
                 .anyMatch(person -> person.getToStage() == currStage)) {
             personListInLift = personListInLift.stream()
                     .filter(person -> {
-                if (person.getToStage() == currStage) {
-                    curPerInLift--;
-                    return false;
-                }
-                return true;
-            })
+                        if (person.getToStage() == currStage) {
+                            curPerInLift--;
+                            return false;
+                        }
+                        return true;
+                    })
                     .collect(Collectors.toList());
 
             System.out.println("Этаж " + currStage + ". Лифт " + liftNum + ". Высаживаю людей");
@@ -187,23 +177,17 @@ public class Lift implements Runnable {
     private boolean isFull() {
         if (curPerInLift == maxNumOfPerson) {
             System.out.println("Лифт " + liftNum + " переполнен");
-            return true;
+            return false;
         }
-        return false;
+        return true;
     }
 
     /**
      * Остановить лифт
      */
-    public void stop() {
-        if (currStatus == Status.STOP) {
-            System.out.println("Этаж " + currStage + ". Лифт поехал");
-            currStatus = prevStatus;
-        } else {
-            System.out.println("Этаж " + currStage + ". Лифт остановился");
-            prevStatus = currStatus;
-            currStatus = Status.STOP;
-        }
+    public void Stop() {
+       if(isRun) isRun=false;
+       else isRun=true;
     }
 
     /**
