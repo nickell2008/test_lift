@@ -4,17 +4,19 @@ public class Main {
 
     public static void main(String[] args) throws InterruptedException {
 
-        Building home = new Building(4);
-        home.getStage(3).callLift(2).goToStage(4);
-        home.getStage(2).callLift(1).goToStage(3);
+        Building home = new Building(10);
+        for(int i=0;i<12;i++)
+        home.getStage(5).toLastStage();
+        home.getStage(3).callLift(9);
+        home.getStage(4).callLift(1);
+        home.getStage(7).callLift(2);
+        home.getStage(3).callLift(5);
+        home.getStage(8).callLift(1);
+        new Thread(new Lift(home,1)).start();
+        new Thread(new Lift(home,2)).start();
 
-        home.getStage(3).callLift(1).goToStage(1);
-        home.startLift();
-        home.lift.stop();
-        home.getStage(3).callLift(1).goToStage(1);
-        home.lift.stop();
-        home.getStage(3).callLift(1).goToStage(1);
-        home.startLift();
+
+
 
 
 

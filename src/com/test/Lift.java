@@ -1,112 +1,127 @@
 package com.test;
 
-import java.util.Comparator;
-import java.util.HashSet;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.stream.Collectors;
 
-public class Lift {
+public class Lift implements Runnable {
 
     public enum Status {UP, DOWN, STOP}
 
-    private final int V = 1;//скорость движения
-    private final int H = 4;//высота лифта и этажа
+    private final int V = 1; //скорость движения
+    private final int H = 4; //высота лифта и этажа
 
+
+    private Integer currStage = 1; //текущий этаж. Начинаем всегда с первого
+    private Status currStatus = Status.UP; //текущее состояние
+    private Status prevStatus; //пред состояние
+    private int maxNumOfPerson = 10;
+
+
+    private int liftNum;
+
+    private Building building;
+    private List<Person> personListInLift = new LinkedList<>();
+    private int curPerInLift;
     private int lastStage;
 
-    private Integer currStage = 1;//текущий этаж. Начинаем всегда с первого
-    private Status currStatus;//текущее состояние
-    private Status prevStatus;//пред состояние
-    private Integer maxNumOfPerson = 10;
-    private int lastCall;
+    public Lift(Building building, int liftNum) {
+        this.liftNum = liftNum;
+        this.building = building;
+        this.lastStage = building.getNumOfStages() - 1;
+    }
 
-    private Set<Integer> call = new LinkedHashSet<>();//список выозовов лифта
-    private Set<Integer> goUp = new HashSet<>();//список этажей , для выхода из лифта при подьеме
-    private Set<Integer> goDown = new HashSet<>();//список этажей , для выхода из лифта при спуске
-
-    public Lift(int lastStage) {
-        this.lastStage = lastStage;
-
-
+    private List<Person> getPersonInStage() {
+        return building.getStage(currStage).getPersonList();
     }
 
     /**
      * Запуск лифта
      */
-    public void go() throws InterruptedException {
-
-        while (true) {
-
-            if (currStage == 1) currStatus = Status.UP;
-            if (currStage == lastStage) currStatus = Status.DOWN;
-            System.out.println(currStatus);
-            System.out.println("list up " + goUp);
-            System.out.println("list down " + goDown);
-//            System.out.println("cur stage "+currStage);
-            if (currStatus == Status.UP && currStage != lastStage && !goUp.isEmpty()) {
-
-                if (call.contains(currStage)) {
-                    call.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Подбираем человека");
+    public void run() {
+        while (hasCall() || isGoDown() || isGoUp()) {
+            while (currStatus == Status.UP) {
+                getPeople();
+                if (!isGoUp()) {
+                    currStatus = Status.DOWN;
+                    break;
                 }
-
-                System.out.println("Этаж " + currStage + ". Лифт едет вверх...");
-                Thread.sleep(V * H * 100);
+                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вверх...");
+                try {
+                    Thread.sleep(V * H * 30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
                 currStage++;
-
-                if (goUp.contains(currStage)) {
-                    goUp.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Высаживаю человека");
+                pushPerson();
+            }
+            if (!hasCall() && curPerInLift == 0) stop();
+            while (currStatus == Status.DOWN) {
+                getPeople();
+                System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вниз...");
+                try {
+                    Thread.sleep(V * H * 30);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
                 }
-
-                if (goUp.isEmpty()) currStatus = Status.DOWN;
-            } else if (currStatus == Status.DOWN && currStage != 1 && !goDown.isEmpty()) {
-
-                if (call.contains(currStage)) {
-                    call.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Подбираем человека");
-                }
-
-                System.out.println("Этаж " + currStage + ". Лифт едет вниз...");
-                Thread.sleep(V * H * 100);
                 currStage--;
-                if (goDown.contains(currStage)) {
-                    goDown.remove(currStage);
-                    System.out.println("Этаж " + currStage + ". Высаживаю человека");
-                }
-                if (goDown.isEmpty()) currStatus = Status.UP;
-
-            } else break;
+                pushPerson();
+                if (!isGoDown()) currStatus = Status.UP;
+            }
         }
     }
 
-    public void goToStage(Integer stage) {
-        System.out.print("Ехать на "+ stage);
-//        int maxStageToUp = !goUp.isEmpty() ? goUp.stream().max(Comparator.comparing(Integer::valueOf)).get() : 0;
-//        if (maxStageToUp < stage)
-//            goUp.add(stage);
-//        else goDown.add(stage);
-        if(stage>lastCall){
-            goUp.add(stage);
-        }else goDown.add(stage);
+    private boolean isGoUp() {
+        return personListInLift.stream().anyMatch(person -> person.getToStage() > currStage)
+                || building.getStages().stream()
+                .anyMatch(stage -> stage.getPersonList().stream().anyMatch(person -> person.getCurrStage() > currStage));
     }
 
-
-    public int getLastStage() {
-        System.out.println("Последний этаж " + lastStage);
-        return lastStage;
+    private boolean isGoDown() {
+        return personListInLift.stream().anyMatch(person -> person.getToStage() < currStage)
+                || building.getStages().stream()
+                .anyMatch(stage -> stage.getPersonList().stream().anyMatch(person -> person.getToStage() < currStage));
     }
 
-    /**
-     * Вызов лифта
-     *
-     * @param from с какого этажа вызов
-     */
-    public Lift call(Integer from, Integer numOfPerson) {
-        lastCall = from;
-        call.add(from);
-        System.out.println("Лифт вызвали на " + from + " этаже");
-        return this;
+    private boolean hasCall() {
+        return (building.getStages().stream().anyMatch(Stage::hasPeople));
+    }
+
+    private synchronized void getPeople() {
+        if (!getPersonInStage().isEmpty() && !ifFull()) {
+            System.out.println("Этаж " + currStage + ". Лифт " +liftNum+ ". Подбираем людей");
+            Iterator<Person> personIterator = getPersonInStage().iterator();
+            while (personIterator.hasNext() && !ifFull()) {
+                personListInLift.add(personIterator.next());
+                personIterator.remove();
+                curPerInLift++;
+            }
+            System.out.println("В лифте "+liftNum+" " + curPerInLift + " людей. ");
+
+        }
+    }
+
+    private void pushPerson() {
+        if (personListInLift.stream().anyMatch(person -> person.getToStage() == currStage)) {
+            personListInLift = personListInLift.stream().filter(person -> {
+                if (person.getToStage() == currStage) {
+                    curPerInLift--;
+                    return false;
+                }
+                return true;
+            })
+                    .collect(Collectors.toList());
+
+            System.out.println("Этаж " + currStage + ". Лифт "+liftNum+". Высаживаю людей");
+            System.out.println("В лифте "+liftNum+" " + curPerInLift + " людей. ");
+        }
+    }
+
+    private boolean ifFull() {
+        if (curPerInLift == maxNumOfPerson) {
+            System.out.println("Лифт "+liftNum+" переполнен");
+            return true;
+        }
+        return false;
     }
 
     /**
@@ -123,12 +138,10 @@ public class Lift {
         }
     }
 
-
     /**
      * Получить статус лифта
      */
     public Status getCurrStatus() {
-        if (goUp.isEmpty() && goDown.isEmpty()) currStatus = Status.STOP;
         String status = currStatus == Status.DOWN ? "едет вниз" : currStatus == Status.UP ? "едет вверх" : "стоит";
         System.out.println("Лифт " + status);
         return currStatus;
@@ -141,4 +154,6 @@ public class Lift {
         System.out.println("Лифт на " + currStage + " этаже");
         return currStage;
     }
+
+
 }
