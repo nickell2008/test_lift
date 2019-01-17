@@ -38,6 +38,10 @@ public class Stage {
         return personList;
     }
 
+    public void setPersonList(List<Person> personList) {
+        this.personList = personList;
+    }
+
     public boolean hasPeople() {
         return personList.size() != 0;
     }
