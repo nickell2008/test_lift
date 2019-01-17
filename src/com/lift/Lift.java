@@ -1,5 +1,6 @@
 package com.lift;
 
+
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -8,18 +9,14 @@ import java.util.stream.Collectors;
  */
 public class Lift implements Runnable {
 
-    public enum Status {UP, DOWN, STOP}
-
     private final int V = 1; //скорость движения
     private final int H = 4; //высота лифта и этажа
-    private final int time = 10 * V * H;
+    private final int time = 1000 * V * H;
 
 
     private Integer currStage = 1; //текущий этаж. Начинаем всегда с первого
-    private Status currStatus = Status.UP; //текущее состояние
-    private Status prevStatus; //пред состояние
     private final int maxNumOfPerson = 10; // максимальное кол-во людей в лифте
-    private boolean isRun = true;
+    private boolean isRun = true; //лифт работает
 
 
     private int liftNum; // номер лифта
@@ -37,12 +34,16 @@ public class Lift implements Runnable {
         return building.Stage(currStage).getPersonList();
     }
 
+    private void setPersonInStage(List<Person> lastPerson) {
+        building.Stage(currStage).setPersonList(lastPerson);
+    }
+
     /**
      * Запуск лифта
      */
     @Override
     public void run() {
-        while ((isGoDown() || isGoUp()&&isRun)) {
+        while ((isGoDown() || isGoUp()) && isRun) {
             while (isGoUp()) {
                 getPeople();
                 if (checkVip()) {
@@ -83,9 +84,14 @@ public class Lift implements Runnable {
                 ||
                 building.getStages().stream()
                         .anyMatch(stage -> stage.getPersonList().stream()
-                                .anyMatch(person -> person.getToStage() < currStage));
+                                .anyMatch(person -> person.getCurrStage() < currStage));
     }
 
+    /**
+     * Проверка на вип персон
+     *
+     * @return
+     */
     public boolean checkVip() {
         Optional<Person> turnVip = personListInLift.stream()
                 .filter(Person::isVip)
@@ -114,6 +120,9 @@ public class Lift implements Runnable {
         pushPerson();
     }
 
+    /**
+     * Работа лифта вниз
+     */
     private void goDown() {
         System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вниз ...");
         currStage--;
@@ -124,6 +133,9 @@ public class Lift implements Runnable {
         }
     }
 
+    /**
+     * Работа лифта вверх
+     */
     private void goUp() {
         System.out.println("Этаж " + currStage + ". Лифт " + liftNum + " едет вверх ...");
         currStage++;
@@ -146,6 +158,10 @@ public class Lift implements Runnable {
                 personIterator.remove();
                 curPerInLift++;
             }
+            List<Person> lastPerson = new ArrayList<>();
+            personIterator.forEachRemaining(lastPerson::add);
+            System.out.println("Осталось людей  " + lastPerson.size() + " на " + currStage + " этаже");
+            setPersonInStage(lastPerson);
             System.out.println("В лифте " + liftNum + " " + curPerInLift + " людей. ");
         }
     }
@@ -185,19 +201,11 @@ public class Lift implements Runnable {
     /**
      * Остановить лифт
      */
-    public void Stop() {
-       if(isRun) isRun=false;
-       else isRun=true;
+    public void stop() {
+        if (isRun) isRun = false;
+        else isRun = true;
     }
 
-    /**
-     * Получить статус лифта
-     */
-    public Status getCurrStatus() {
-        String status = currStatus == Status.DOWN ? "едет вниз" : currStatus == Status.UP ? "едет вверх" : "стоит";
-        System.out.println("Лифт " + status);
-        return currStatus;
-    }
 
     /**
      * Получить значение текущего этажа
